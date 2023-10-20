@@ -35,31 +35,40 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'product_name' => 'required|max:20',
-            'price' => 'required|integer',
-            'stock' => 'required|integer',
-            'company_id' => 'required|max:140',
-        ]);
-    
-        $image = $request->file('image');
-        $product = new Product;
-        $product->product_name = $request->input('product_name');
-        $product->price = $request->input('price');
-        $product->stock = $request->input('stock');
-        $product->company_id = $request->input('company_id');
-        $product->comment = $request->input('comment');
-        
-        // ファイルをアップロードし、パスを取得
-        if ($image) {
-            $imagePath = $product->uploadImage($image);
-            $product->img_path = $imagePath;
+        try {
+            return DB::transaction(function () use ($request) {
+                $request->validate([
+                    'product_name' => 'required|max:20',
+                    'price' => 'required|integer',
+                    'stock' => 'required|integer',
+                    'company_id' => 'required|max:140',
+                ]);
+            
+                $image = $request->file('image');
+                $product = new Product;
+                $product->product_name = $request->input('product_name');
+                $product->price = $request->input('price');
+                $product->stock = $request->input('stock');
+                $product->company_id = $request->input('company_id');
+                $product->comment = $request->input('comment');
+                
+                // ファイルをアップロード・パスを取得
+                if ($image) {
+                    $imagePath = $product->uploadImage($image);
+                    $product->img_path = $imagePath;
+                }
+                
+                $product->save();
+            
+                return redirect()->route('product.index')
+                    ->with('success', '商品を登録しました');
+            });
+        } catch (QueryException $e) {
+            // エラーが発生した場合の処理を追加
+            \Log::error('Database error: ' . $e->getMessage());
+            return redirect()->route('product.index')
+                ->with('error', 'データベースエラーが発生しました。');
         }
-        
-        $product->save();
-    
-        return redirect()->route('product.index')
-            ->with('success', '商品を登録しました');
     }
 
     /**
@@ -96,31 +105,41 @@ class ProductController extends Controller
      */
     public function update(Request $request, Product $product)
     {
-        $request->validate([
-            'product_name' => 'required|max:20',
-            'price' => 'required|integer',
-            'stock' => 'required|integer',
-            'company_id' => 'required|max:140',
-            'image' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
-        ]);
-        
-        $product->product_name = $request->input('product_name');
-        $product->price = $request->input('price');
-        $product->stock = $request->input('stock');
-        $product->company_id = $request->input('company_id');
-        $product->comment = $request->input('comment');
-        
-        // ファイルをアップロードし、パスを取得して更新
-        if ($request->hasFile('image')) {
-            $imagePath = $product->uploadImage($request->file('image'));
-            $product->img_path = $imagePath;
+        try {
+            return DB::transaction(function () use ($request, $product) {
+                $request->validate([
+                    'product_name' => 'required|max:20',
+                    'price' => 'required|integer',
+                    'stock' => 'required|integer',
+                    'company_id' => 'required|max:140',
+                    'image' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+                ]);
+    
+                // 既存の商品情報を更新
+                $product->product_name = $request->input('product_name');
+                $product->price = $request->input('price');
+                $product->stock = $request->input('stock');
+                $product->company_id = $request->input('company_id');
+                $product->comment = $request->input('comment');
+            
+                // ファイルをアップロード・パスを取得して更新
+                if ($request->hasFile('image')) {
+                    $imagePath = $product->uploadImage($request->file('image'));
+                    $product->img_path = $imagePath;
+                }
+            
+                $product->save();
+            
+                return redirect()->route('product.index')
+                    ->with('success', $product->product_name . 'を変更しました');
+            });
+        } catch (QueryException $e) {
+            // エラーが発生した場合の処理を追加
+            \Log::error('Database error: ' . $e->getMessage());
+            return redirect()->route('product.index')
+                ->with('error', 'データベースエラーが発生しました。');
         }
-        
-        $product->save();
-        
-        return redirect()->route('product.index')
-            ->with('success', $product->product_name . 'を変更しました');        
-    }    
+    }  
 
     /**
      * Remove the specified resource from storage.
