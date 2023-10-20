@@ -56,7 +56,7 @@
                 <td>{{ $product->product_name }}</td>
                 <td style="text-align:right">{{ $product->price }}円</td>
                 <td style="text-align:right">{{ $product->stock }}</td>
-                <td>{{ $product->company->company_name }}</td>
+                <td>{{ $product->company_name }}</td>
                 <td style="text-align:center">
                       <a class="btn btn-primary" href="{{ route('product.show',$product->id) }}">詳細</a>
                       <td style="text-align:center">

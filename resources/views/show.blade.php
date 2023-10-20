@@ -20,7 +20,7 @@
   <p>{{ $product->product_name }}</p>
     <p>価格: {{ $product->price }}円</p>
     <p>在庫数: {{ $product->stock }}</p>
-    <p>メーカー名: {{ $product->company->company_name }}</p>
+    <p>メーカー名: {{ $product->company_name }}</p>
     <p>コメント: {{ $product->comment }}</p>
     </div>
 </div>

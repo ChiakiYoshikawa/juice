@@ -13,26 +13,20 @@ class ProductController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
-    {
-        $companies = Company::all(); // ここで $companies を取得
-        $products = Product::with('company')->latest()->paginate(5);
-        return view('index', compact('products', 'companies')); // $companies も compact に追加
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        $companies = Company::all();
-        return view('create')
-        ->with('companies',$companies);
-
-    }
-
+    
+        public function index()
+        {
+            $products = (new Product())->getProducts();
+            $companies = Company::getAllCompanies();
+    
+            return view('index', compact('products', 'companies'));
+        }
+    
+        public function create()
+        {
+            $companies = Company::getAllCompanies();
+            return view('create', compact('companies'));
+        }
     /**
      * Store a newly created resource in storage.
      *
@@ -42,33 +36,30 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'product_name'=>'required|max:20',
-            'price'=>'required|integer',
-            'stock'=>'required|integer',
-            'company_id'=>'required|max:140',
-            ]);
-
-            $image = $request->file('image');
-            $path = 'images/products';// 保存先ディレクトリを指定
-            $filename = null;
-            if ($image) {
-                // ファイル名を一意に生成
-                $filename = uniqid() . '_' . $image->getClientOriginalName();
-                // ファイルを指定ディレクトリに保存
-                $image->storeAs($path, $filename, 'public');
-            }
-
-            $product = new Product;
-            $product->product_name = $request->input(["product_name"]);
-            $product->price = $request->input(["price"]);
-            $product->stock = $request->input(["stock"]);
-            $product->company_id = $request->input(["company_id"]);
-            $product->comment = $request->input(["comment"]);
-            $product->img_path = $path . '/' . $filename; // 画像のパスを保存
-            $product->save();
+            'product_name' => 'required|max:20',
+            'price' => 'required|integer',
+            'stock' => 'required|integer',
+            'company_id' => 'required|max:140',
+        ]);
     
-            return redirect()->route('product.index')
-            ->with('success','商品を登録しました');
+        $image = $request->file('image');
+        $product = new Product;
+        $product->product_name = $request->input('product_name');
+        $product->price = $request->input('price');
+        $product->stock = $request->input('stock');
+        $product->company_id = $request->input('company_id');
+        $product->comment = $request->input('comment');
+        
+        // ファイルをアップロードし、パスを取得
+        if ($image) {
+            $imagePath = $product->uploadImage($image);
+            $product->img_path = $imagePath;
+        }
+        
+        $product->save();
+    
+        return redirect()->route('product.index')
+            ->with('success', '商品を登録しました');
     }
 
     /**
@@ -79,14 +70,10 @@ class ProductController extends Controller
      */
     public function show(Product $product)
     {
-            // 商品名と商品IDに関連づくデータを取得
-    $relatedData = $product->productName;
-
-    // $relatedData を使用してデータを利用
-
-    return view('show', compact('product', 'relatedData'));
+        $relatedData = $product->getRelatedData();
+        return view('show', compact('product', 'relatedData'));
+        
     }
-
     /**
      * Show the form for editing the specified resource.
      *
@@ -95,7 +82,7 @@ class ProductController extends Controller
      */
     public function edit(Product $product)
     {
-        $companies = Company::all();
+        $companies = Company::getAllCompanies();
         return view('edit',compact('product'))
         ->with('companies', $companies);
     }
@@ -110,33 +97,30 @@ class ProductController extends Controller
     public function update(Request $request, Product $product)
     {
         $request->validate([
-            'product_name'=>'required|max:20',
-            'price'=>'required|integer',
-            'stock'=>'required|integer',
-            'company_id'=>'required|max:140',
-            ]);
-
-            $image = $request->file('image');
-            $path = 'images/products';// 保存先ディレクトリを指定
-            $filename = null;
-            if ($image) {
-                // ファイル名を一意に生成
-                $filename = uniqid() . '_' . $image->getClientOriginalName();
-                // ファイルを指定ディレクトリに保存
-                $image->storeAs($path, $filename, 'public');
-            }
-            
-            $product->product_name = $request->input(["product_name"]);
-            $product->price = $request->input(["price"]);
-            $product->stock = $request->input(["stock"]);
-            $product->company_id = $request->input(["company_id"]);
-            $product->comment = $request->input(["comment"]);
-            $product->img_path = $path . '/' . $filename; // 画像のパスを保存
-            $product->save();
-            
-            return redirect()->route('product.index')
-            ->with('success',$product->product_name . 'を変更しました');
-    }
+            'product_name' => 'required|max:20',
+            'price' => 'required|integer',
+            'stock' => 'required|integer',
+            'company_id' => 'required|max:140',
+            'image' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
+        
+        $product->product_name = $request->input('product_name');
+        $product->price = $request->input('price');
+        $product->stock = $request->input('stock');
+        $product->company_id = $request->input('company_id');
+        $product->comment = $request->input('comment');
+        
+        // ファイルをアップロードし、パスを取得して更新
+        if ($request->hasFile('image')) {
+            $imagePath = $product->uploadImage($request->file('image'));
+            $product->img_path = $imagePath;
+        }
+        
+        $product->save();
+        
+        return redirect()->route('product.index')
+            ->with('success', $product->product_name . 'を変更しました');        
+    }    
 
     /**
      * Remove the specified resource from storage.
@@ -146,9 +130,10 @@ class ProductController extends Controller
      */
     public function destroy(Product $product)
     {
-        $product->delete();
+        $product->deleteProduct();
+    
         return redirect()->route('product.index')
-        ->with('success',$product->product_name . 'を削除しました');
+            ->with('success', $product->product_name . 'を削除しました');
     }
     
     public function search(Request $request)
@@ -156,21 +141,12 @@ class ProductController extends Controller
         $search = $request->input('search');
         $manufacturer = $request->input('manufacturer');
     
-        $query = Product::query();
+        $productModel = new Product();
+        $products = $productModel->getSearchResults($search, $manufacturer);
     
-        if ($search) {
-            $query->where('product_name', 'like', '%' . $search . '%');
-        }
-    
-        if ($manufacturer) {
-            $query->where('company_id', $manufacturer);
-        }
-    
-        $products = $query->paginate(10);
-    
-        // メーカー情報を取得
-        $manufacturers = Company::pluck('company_name', 'id');
-        $companies = Company::all();
+        $companyModel = new Company();
+        $manufacturers = $companyModel->getManufacturers();
+        $companies = $companyModel->getCompanies();
     
         return view('index', compact('products', 'manufacturers', 'companies'));
     }

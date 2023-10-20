@@ -2,14 +2,24 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class Company extends Model
 {
-    use HasFactory;
-    public function products()
+    public static function getAllCompanies()
     {
-        return $this->hasMany(Product::class, 'company_id', 'id');
+        return DB::table('companies')->get();
+    }
+
+    public function getManufacturers()
+    {
+        return DB::table('companies')->pluck('company_name', 'id');
+    }
+
+    public function getCompanies()
+    {
+        return DB::table('companies')->get();
     }
 }
+
