@@ -1,14 +1,14 @@
 <?php
 
-namespace App\Models;
+namespace App\Http\Controllers;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Company;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-class Company extends Model
+class CompanyController extends Controller
 {
-
-    public static function getAllCompanies()
+    public function getAllCompanies()
     {     
         return DB::table('companies')->get();
     }

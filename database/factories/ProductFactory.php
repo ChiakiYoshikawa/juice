@@ -23,7 +23,7 @@ class ProductFactory extends Factory
             'price' => $this->faker->numberBetween(10, 800),
             'stock' => $this->faker->numberBetween(0, 100),
             'comment' => $this->faker->sentence,
-            'img_path' => 'public/' . $this->faker->image(storage_path('app/public/images/products'), 400, 300, 'drinks', false, true),
+            'img_path' => 'images/products/' . $this->faker->image(storage_path('app/public/images/products'), 400, 300, 'drinks', false, true),
         ];
     }
 }
